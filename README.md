@@ -6,7 +6,7 @@ This Python script smooths out noisy one-dimensional data by optimizing a cost f
 1. The square difference between the smooth model and the input data.
 1. The square difference between the derivative of the smooth model at each input data point.
 
-The competition is quantified by a stiffness coefficient multiplying the derivative term. For a _stiffer_ cost function, the model will typically pull away from the noisy data and look _smoother_. However, this is typically at the cost (:grin:) of being a _poorer_ fit to the numerical/experimental data.
+The competition is quantified by a smoother coefficient multiplying the derivative term. For a _smoother_ cost function, the model will typically pull away from the noisy data and look _smoother_. However, this is typically at the cost (:grin:) of being a _poorer_ fit to the numerical/experimental data.
 
 ## Notes on nomenclature
 Here I clarify some of the terminology I use in the repo:

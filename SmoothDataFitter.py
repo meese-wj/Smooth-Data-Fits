@@ -1,3 +1,4 @@
+from distutils.log import error
 import numpy as np
 import matplotlib.pyplot as plt 
 
@@ -6,13 +7,17 @@ This data fitting protocol essentially uses a Monte
 Carlo scheme that minimizes the following competing 
 terms:
 
-    Cost = ( model - data )^2 
-           + stiffness * ( model_slope_difference )^2
+    Cost = (1 - smoother) * ( model - data )^2 
+           + smoother * ( model_slope_difference )^2
 
-Of course, these terms are summed over all data. The
-'stiffness' quantity is a parameter that controls 
+Of course, these terms are summed over all data. 
+
+The 'smoother' quantity is a parameter that controls 
 the degree to which either term dominates the mini-
-mization scheme.
+mization scheme. We note that when smoother = 1, then
+the resulting curve with be a straight line, and when
+smoother = 0, the resulting curve with exactly match
+the input data.
 
 Currently, this data only works for functions of 
 1D arguments.
@@ -22,8 +27,10 @@ class SmoothDataFitter:
     def __init__(self) -> None:
         pass
 
-    def set_stiffness(self, _stiff):
-        self.stiffness = _stiff
+    def set_smoother(self, _smooth):
+        if _smooth < 0. or _smooth > 1.:
+            raise AttributeError("\nThe smoother parameter must be between 0 and 1.\nsmoother = 0 is noisy and smoother = 1 approaches a line.")    
+        self.smoother = _smooth
         return 
     
     def set_data(self, _data):
@@ -37,6 +44,10 @@ class SmoothDataFitter:
     def set_problem(self, _input, _data):
         self.set_input(_input)
         self.set_data(_data)
+        if self.input.shape != self.data.shape:
+            raise AttributeError("input x-axis and y-axis data are not of the same size. x: {0}, y: {1}".format(self.input.shape, self.data.shape))
+        if len(self.input) < 4:
+            raise AttributeError("Not enough input data. At least 4 points are needed, {} provided.".format(len(self.input)))
         return
     
     def initialize_model(self):
@@ -44,8 +55,8 @@ class SmoothDataFitter:
         self.model = self.get_average_array(use_data=True)
         return
 
-    def initialize_problem(self, _input, _data, stiffness=1.):
-        self.set_stiffness(stiffness)
+    def initialize_problem(self, _input, _data, smoother=1.):
+        self.set_smoother(smoother)
         self.set_problem(_input, _data)
         self.initialize_model()
         return
@@ -84,7 +95,7 @@ class SmoothDataFitter:
     def point_model_diff_term(self, index, step=0.):
         # This term wants to minimize the difference
         # between the model (+step) and the input data
-        return ( self.model[index] + step - self.data[index] ) ** 2.
+        return (1. - self.smoother) * ( self.model[index] + step - self.data[index] ) ** 2.
     
     def point_model_slope_term(self, index, step=0.):
         # This term wants to minimize the discontinuity
@@ -96,7 +107,7 @@ class SmoothDataFitter:
         weights = 1, 1
         left_deriv  = (model_point - self.model[index - 1]) / (self.input[index] - self.input[index - 1])
         right_deriv = (self.model[index + 1] - model_point) / (self.input[index + 1] - self.input[index])
-        return self.stiffness * (( weights[0] * left_deriv - weights[1] * right_deriv ) / ( weights[0] + weights[1] )) ** 2.
+        return self.smoother * (( weights[0] * left_deriv - weights[1] * right_deriv ) / ( weights[0] + weights[1] )) ** 2.
 
     def boundary_slope_term(self, index, step=0.):
         # By definition, the boundary slopes want
@@ -114,7 +125,7 @@ class SmoothDataFitter:
             interior_slope = ( model_point - self.model[index - 1] ) / (self.input[index] - self.input[index - 1])
             boundary_slope = (self.model[index - 1] - self.model[index - 2]) / ( self.input[index - 1] - self.input[index - 2] )
 
-        return self.stiffness * ( interior_slope - boundary_slope ) ** 2.
+        return self.smoother * ( interior_slope - boundary_slope ) ** 2.
 
     def point_cost(self, index, step=0.):
         slope_functions = self.point_model_slope_term, self.boundary_slope_term
@@ -172,7 +183,7 @@ if __name__ == "__main__":
 
 
     sdf = SmoothDataFitter()
-    sdf.initialize_problem(test_input, test_data, stiffness=1.5)
+    sdf.initialize_problem(test_input, test_data, smoother=1)
     weighted_avg = np.copy(sdf.model)
     sdf.wiggle()
 
