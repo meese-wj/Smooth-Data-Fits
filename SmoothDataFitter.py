@@ -34,10 +34,14 @@ class SmoothDataFitter:
         return 
     
     def set_data(self, _data):
+        if not isinstance(_data, np.ndarray):
+            raise TypeError("Data object is not a numpy ndarray. type(data) = {}".format(type(_data)))
         self.data = _data
         return 
     
     def set_input(self, _input):
+        if not isinstance(_input, np.ndarray):
+            raise TypeError("Input data object is not a numpy ndarray. type(input) = {}".format(type(_input)))
         self.input = _input
         return 
 
@@ -180,7 +184,6 @@ if __name__ == "__main__":
 
     test_input = np.array([ 0, 1, 1.5, 2, 2.25, 2.5, 4, 5, 6, 7, 10, 11, 14, 16, 18 ])
     test_data = np.array([ 0, 0.5, 2, 4, 4.1, 4.5, 5, 5.5, 5.25, 4, 2, -2, -2, -1, -0.5 ])
-
 
     sdf = SmoothDataFitter()
     sdf.initialize_problem(test_input, test_data, smoother=1)
